@@ -18,9 +18,20 @@ export async function proxy(req: NextRequest) {
   const companyCode = await resolveCompanyCodeFromHost(req.headers.get("host") || "", req.nextUrl.searchParams);
   if (!companyCode) return NextResponse.next();
 
+  // Every in-app <Link> is built as an absolute `/s/{companyCode}/...` path (see AdminNavGuard.tsx's
+  // header comment for why) — so a client-side navigation's request path already carries that
+  // prefix. Only the very first request into a tenant (bare host, no path) doesn't. Prepending
+  // unconditionally would double the prefix on every second+ navigation; only rewrite when it's
+  // actually missing.
+  const encoded = encodeURIComponent(companyCode);
+  const publicRoot = `/s/${encoded}`;
+  if (req.nextUrl.pathname === publicRoot || req.nextUrl.pathname.startsWith(`${publicRoot}/`)) {
+    return NextResponse.next();
+  }
+
   const url = req.nextUrl.clone();
   const suffix = req.nextUrl.pathname === "/" ? "" : req.nextUrl.pathname;
-  url.pathname = `/s/${encodeURIComponent(companyCode)}${suffix}`;
+  url.pathname = `${publicRoot}${suffix}`;
   return NextResponse.rewrite(url);
 }
 
