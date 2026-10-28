@@ -15,6 +15,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { resolveCompanyCodeFromHost } from "./lib/resolveTenant";
 
 export async function proxy(req: NextRequest) {
+  // Next.js's own top-level /api/* route handlers (storefront's checkout, admin login, etc.) are
+  // not tenant pages — they must never get a `/s/{companyCode}` prefix, or they 404.
+  if (req.nextUrl.pathname.startsWith("/api/")) return NextResponse.next();
+
   const companyCode = await resolveCompanyCodeFromHost(req.headers.get("host") || "", req.nextUrl.searchParams);
   if (!companyCode) return NextResponse.next();
 
