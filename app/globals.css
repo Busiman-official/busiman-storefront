@@ -1,0 +1,141 @@
+@import "tailwindcss";
+
+/*
+  Neutral canvas + per-tenant accent — every tenant picks their own accentColor (passed inline per
+  element, never hardcoded here), so the shared chrome stays a quiet, high-contrast neutral that
+  lets that one brand color read as the page's real color decision. Values chosen against the
+  ui-ux-pro-max skill's light-mode contrast table (slate-900 text, slate-600 muted, slate-200
+  border — not gray-400/gray-100, which fail the 4.5:1 minimum at body-text sizes).
+  Rubik (headings) + Nunito Sans (body): the skill's dedicated "E-commerce Clean" pairing.
+*/
+:root {
+  --sf-bg: #f8fafc;
+  --sf-surface: #ffffff;
+  --sf-ink: #0f172a;
+  --sf-ink-soft: #475569;
+  --sf-line: #e2e8f0;
+}
+
+@theme inline {
+  --color-sf-bg: var(--sf-bg);
+  --color-sf-surface: var(--sf-surface);
+  --color-sf-ink: var(--sf-ink);
+  --color-sf-ink-soft: var(--sf-ink-soft);
+  --color-sf-line: var(--sf-line);
+  --font-sans: var(--font-nunito-sans);
+  --font-heading: var(--font-rubik);
+}
+
+body {
+  background: var(--sf-bg);
+  color: var(--sf-ink);
+  font-family: var(--font-nunito-sans), system-ui, sans-serif;
+}
+
+/* Prices and quantities line up by digit width wherever they appear — a real commerce-content
+   device (so a column of prices reads cleanly), not decoration. */
+.sf-price {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Visible keyboard focus everywhere, since several interactive elements below turn off the
+   browser default in favor of their own hover/border treatment instead. */
+:focus-visible {
+  outline: 2px solid var(--sf-ink);
+  outline-offset: 2px;
+}
+
+/* Merchant-written Markdown (policy pages, about text) — react-markdown emits plain tags with no
+   classes of its own, so this is the only place these elements get real typography. Deliberately
+   restrained: this is long-form body text (a policy, a store's about blurb), not marketing copy —
+   headings step down in size rather than shouting, and list markers use the page's own ink color
+   rather than a bullet glyph that fights the font. */
+.sf-markdown {
+  font-size: 0.875rem;
+  line-height: 1.7;
+  color: var(--sf-ink-soft);
+}
+.sf-markdown > :first-child { margin-top: 0; }
+.sf-markdown > :last-child { margin-bottom: 0; }
+.sf-markdown p { margin: 0 0 1em; }
+.sf-markdown h1, .sf-markdown h2, .sf-markdown h3 {
+  font-family: var(--font-heading);
+  color: var(--sf-ink);
+  font-weight: 600;
+  margin: 1.4em 0 0.5em;
+}
+.sf-markdown h1 { font-size: 1.25rem; }
+.sf-markdown h2 { font-size: 1.1rem; }
+.sf-markdown h3 { font-size: 1rem; }
+.sf-markdown strong { color: var(--sf-ink); font-weight: 600; }
+.sf-markdown ul, .sf-markdown ol {
+  margin: 0 0 1em;
+  padding-left: 1.3em;
+}
+.sf-markdown ul { list-style: disc; }
+.sf-markdown ol { list-style: decimal; }
+.sf-markdown li { margin: 0.3em 0; }
+.sf-markdown li > ul, .sf-markdown li > ol { margin: 0.3em 0 0; }
+.sf-markdown a { color: var(--sf-ink); text-decoration: underline; text-underline-offset: 2px; }
+.sf-markdown blockquote {
+  margin: 0 0 1em;
+  padding-left: 1em;
+  border-left: 2px solid var(--sf-line);
+  color: var(--sf-ink-soft);
+}
+.sf-markdown code {
+  background: var(--sf-bg);
+  border: 1px solid var(--sf-line);
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+  font-size: 0.85em;
+}
+.sf-markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 1em;
+  font-size: 0.85em;
+}
+.sf-markdown th, .sf-markdown td {
+  border: 1px solid var(--sf-line);
+  padding: 0.5em 0.75em;
+  text-align: left;
+}
+.sf-markdown th { color: var(--sf-ink); font-weight: 600; }
+.sf-markdown hr { border: none; border-top: 1px solid var(--sf-line); margin: 1.5em 0; }
+
+/* Admin editor: a brief outline on the section the sidebar just scrolled to — confirms "this is the
+   one you clicked" without becoming a permanent decoration once the preview is actually visible. */
+.sf-admin-section-highlight {
+  outline: 2px solid var(--sf-ink);
+  outline-offset: 2px;
+  transition: outline-color 1.2s ease-out;
+}
+
+/* Utility-bar marquee — two identical, equally-padded copies of the content track side by side;
+   translating the track by exactly -50% shifts by one copy's width, so the loop is seamless
+   regardless of how long the contact text is. */
+@keyframes sf-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.sf-marquee-track {
+  animation: sf-marquee 16s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Exempted on purpose: a slow, linear sideways text ticker, not the kind of motion
+     prefers-reduced-motion exists to suppress (parallax, zoom, flashing) — and the one
+     piece of UI here the store owner wants always visibly moving, every viewer, no exception. */
+  .sf-marquee-track {
+    animation-duration: 16s !important;
+    animation-iteration-count: infinite !important;
+  }
+}

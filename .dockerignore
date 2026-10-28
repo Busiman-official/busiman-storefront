@@ -1,0 +1,8 @@
+node_modules
+.next
+.git
+.env.local
+dev-out.log
+dev-err.log
+research_notes
+reports
