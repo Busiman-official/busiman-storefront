@@ -110,14 +110,15 @@ export function ClassicTemplate({ companyCode, site, catalog, categories, active
           />
         ) : heroBg ? (
           <>
-            {/* A plain <img>, not next/image's `fill` — this section's own height is driven by its
-                text content (py-14/py-20 padding), not by the image, so there's no fixed box for
-                `fill` to size against; object-cover on an absolutely positioned element already
-                does exactly what's needed here. */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            {/* `fill` only needs a positioned ancestor (the section above is `relative`), not a
+                fixed height on it — same absolute-inset-0 box the plain <img> this replaced already
+                relied on; the section's actual height still comes from its text content/padding. */}
+            <Image
               alt=""
-              className="absolute inset-0 h-full w-full object-cover"
+              className="object-cover"
+              fill
+              priority
+              sizes="100vw"
               src={heroBg}
               style={{ objectPosition: `${siteDetails.heroImagePositionX ?? 50}% ${siteDetails.heroImagePositionY ?? 50}%` }}
             />

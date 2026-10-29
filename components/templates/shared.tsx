@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { CatalogSort, StorefrontBadge, StorefrontCatalogPage, StorefrontProduct, StorefrontSite, StorefrontSiteDetails } from "@/lib/api";
 import { CartBadge } from "@/components/CartBadge";
@@ -224,8 +225,7 @@ export function LogoBadge({
   size?: number;
 }) {
   if (logoUrl) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img alt={storeName} className="rounded-md object-cover" height={size} src={logoUrl} style={{ width: size, height: size }} width={size} />;
+    return <Image alt={storeName} className="rounded-md object-cover" height={size} src={logoUrl} style={{ width: size, height: size }} width={size} />;
   }
   return (
     <div

@@ -12,6 +12,7 @@
  * field, not an array index, so it can't address "this slide's heading" the way it addresses
  * storeName; a sidebar form is the natural fit for a value that's one of up to five.
  */
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
 export interface HeroCarouselSlide {
@@ -103,12 +104,14 @@ export function HeroCarousel({
       onPointerUp={handlePointerUp}
     >
       {slides.map((slide, i) => (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <Image
           alt=""
-          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 motion-reduce:transition-none ${i === index ? "opacity-100" : "opacity-0"}`}
+          className={`object-cover transition-opacity duration-700 motion-reduce:transition-none ${i === index ? "opacity-100" : "opacity-0"}`}
           draggable={false}
+          fill
           key={slide.image + i}
+          priority={i === 0}
+          sizes="100vw"
           src={slide.image}
           style={{ objectPosition: `${slide.positionX ?? 50}% ${slide.positionY ?? 50}%` }}
         />
