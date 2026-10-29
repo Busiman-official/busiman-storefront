@@ -88,8 +88,9 @@ export function CheckoutBody({
     }
     let cancelled = false;
     setEstimatingDelivery(true);
+    const itemsParam = encodeURIComponent(items.map((i) => `${i.slug}:${i.variantId ?? ""}:${i.quantity}`).join(";"));
     const timer = setTimeout(() => {
-      fetch(`/api/storefront/${companyCode}/delivery-estimate?pincode=${trimmed}&subtotal=${totalAmount}`, { cache: "no-store" })
+      fetch(`/api/storefront/${companyCode}/delivery-estimate?pincode=${trimmed}&subtotal=${totalAmount}&items=${itemsParam}`, { cache: "no-store" })
         .then((r) => r.json())
         .then((json) => {
           if (cancelled) return;
@@ -106,7 +107,8 @@ export function CheckoutBody({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [pincode, requiresPincode, companyCode, totalAmount]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pincode, requiresPincode, companyCode, totalAmount, items.map((i) => `${i.slug}:${i.variantId ?? ""}:${i.quantity}`).join(",")]);
 
   // A rough, client-side-only eligibility check (the real gate is server-side, re-checked against
   // the final amount including delivery) — just enough to decide whether COD is worth offering

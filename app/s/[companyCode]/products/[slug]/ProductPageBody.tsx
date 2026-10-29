@@ -42,6 +42,17 @@ export function ProductPageBody({
         : undefined,
   };
 
+  // Mirrors the visible breadcrumb nav below exactly — search engines use this to render a
+  // breadcrumb trail directly in results instead of a bare URL.
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: siteDetails.storeName, item: homeHref },
+      { "@type": "ListItem", position: 2, name: product.name },
+    ],
+  };
+
   return (
     <>
       <NavbarFromSite companyCode={companyCode} site={site} />
@@ -65,6 +76,7 @@ export function ProductPageBody({
 
       {/* Structured data for search engines (Google Shopping/rich results) — not visible to shoppers. */}
       <script dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }} type="application/ld+json" />
+      <script dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} type="application/ld+json" />
     </>
   );
 }
