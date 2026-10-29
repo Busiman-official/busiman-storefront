@@ -48,12 +48,23 @@ export function ProductBadgeRibbon({ badge }: { badge: StorefrontBadge }) {
 
 /** Price + (when discounted) a struck-through MRP and a computed "X% OFF" chip — shared by every
  * product-grid surface for the same reason as ProductBadgeRibbon above. */
-export function ProductPriceLine({ item, accent, currency, size = "sm" }: { item: Pick<StorefrontProduct, "price" | "mrp" | "discountPercent">; accent: string; currency: string; size?: "sm" | "base" }) {
+export function ProductPriceLine({
+  item,
+  accent,
+  currency,
+  size = "sm",
+}: {
+  item: Pick<StorefrontProduct, "price" | "mrp" | "discountPercent" | "isFromPrice">;
+  accent: string;
+  currency: string;
+  size?: "sm" | "base";
+}) {
   if (item.price == null) return null;
   const priceClass = size === "base" ? "text-base font-bold" : "text-sm font-semibold";
   return (
     <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
       <p className={`sf-price ${priceClass}`} style={{ color: accent }}>
+        {item.isFromPrice ? <span className="font-normal text-sf-ink-soft">From </span> : null}
         {formatPrice(item.price, currency)}
       </p>
       {item.discountPercent != null && item.mrp != null ? (

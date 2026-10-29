@@ -1,15 +1,20 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { clearCart, readCart, writeCart, type CartItem } from "@/lib/cart";
+import { cartLineKey, clearCart, readCart, writeCart, type CartItem } from "@/lib/cart";
 
 interface CartContextValue {
   items: CartItem[];
   totalCount: number;
   totalAmount: number;
   addItem: (item: Omit<CartItem, "quantity">, quantity?: number) => void;
-  updateQuantity: (slug: string, quantity: number) => void;
-  removeItem: (slug: string) => void;
+  /** "Buy now" — REPLACES the cart with exactly this one line, rather than merging into whatever
+   * was already there (addItem's behavior). Clicking "Buy now" twice (e.g. the shopper went back
+   * and clicked it again) must land on a checkout for this one purchase, not a cart that's quietly
+   * accumulated every previous click's quantity. */
+  buyNow: (item: Omit<CartItem, "quantity">, quantity?: number) => void;
+  updateQuantity: (slug: string, variantId: string | undefined, quantity: number) => void;
+  removeItem: (slug: string, variantId: string | undefined) => void;
   clear: () => void;
 }
 
@@ -27,9 +32,10 @@ export function CartProvider({ companyCode, children }: { companyCode: string; c
   const addItem = useCallback(
     (item: Omit<CartItem, "quantity">, quantity = 1) => {
       setItems((prev) => {
-        const existing = prev.find((p) => p.slug === item.slug);
+        const key = cartLineKey(item);
+        const existing = prev.find((p) => cartLineKey(p) === key);
         const next = existing
-          ? prev.map((p) => (p.slug === item.slug ? { ...p, quantity: p.quantity + quantity } : p))
+          ? prev.map((p) => (cartLineKey(p) === key ? { ...p, quantity: p.quantity + quantity } : p))
           : [...prev, { ...item, quantity }];
         writeCart(companyCode, next);
         return next;
@@ -38,11 +44,21 @@ export function CartProvider({ companyCode, children }: { companyCode: string; c
     [companyCode]
   );
 
+  const buyNow = useCallback(
+    (item: Omit<CartItem, "quantity">, quantity = 1) => {
+      const next: CartItem[] = [{ ...item, quantity }];
+      writeCart(companyCode, next);
+      setItems(next);
+    },
+    [companyCode]
+  );
+
   const updateQuantity = useCallback(
-    (slug: string, quantity: number) => {
+    (slug: string, variantId: string | undefined, quantity: number) => {
       setItems((prev) => {
+        const key = cartLineKey({ slug, variantId });
         const next =
-          quantity <= 0 ? prev.filter((p) => p.slug !== slug) : prev.map((p) => (p.slug === slug ? { ...p, quantity } : p));
+          quantity <= 0 ? prev.filter((p) => cartLineKey(p) !== key) : prev.map((p) => (cartLineKey(p) === key ? { ...p, quantity } : p));
         writeCart(companyCode, next);
         return next;
       });
@@ -50,7 +66,10 @@ export function CartProvider({ companyCode, children }: { companyCode: string; c
     [companyCode]
   );
 
-  const removeItem = useCallback((slug: string) => updateQuantity(slug, 0), [updateQuantity]);
+  const removeItem = useCallback(
+    (slug: string, variantId: string | undefined) => updateQuantity(slug, variantId, 0),
+    [updateQuantity]
+  );
 
   const clear = useCallback(() => {
     clearCart(companyCode);
@@ -61,8 +80,8 @@ export function CartProvider({ companyCode, children }: { companyCode: string; c
   const totalAmount = useMemo(() => items.reduce((sum, i) => sum + (i.price ?? 0) * i.quantity, 0), [items]);
 
   const value = useMemo(
-    () => ({ items, totalCount, totalAmount, addItem, updateQuantity, removeItem, clear }),
-    [items, totalCount, totalAmount, addItem, updateQuantity, removeItem, clear]
+    () => ({ items, totalCount, totalAmount, addItem, buyNow, updateQuantity, removeItem, clear }),
+    [items, totalCount, totalAmount, addItem, buyNow, updateQuantity, removeItem, clear]
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

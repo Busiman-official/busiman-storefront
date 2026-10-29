@@ -18,24 +18,27 @@ export function ProductGallery({ media, alt }: { media: StorefrontMediaItem[]; a
   const activeItem = media[active];
 
   return (
-    <div className="space-y-2">
-      <div className="relative aspect-square overflow-hidden rounded-lg border border-sf-line bg-sf-surface">
+    // Below lg: thumbnails sit as a horizontal strip under the main image (unchanged mobile
+    // behavior). At lg+: a vertical thumbnail rail to the left of the main image, Amazon-style —
+    // same two <button> markup either way, just re-flowed by the row-reverse + flex-col swap.
+    <div className="flex flex-col gap-2 lg:flex-row-reverse lg:items-start">
+      <div className="relative aspect-square flex-1 overflow-hidden rounded-lg border border-sf-line bg-sf-surface">
         {!hasMedia ? (
           <div className="flex h-full w-full items-center justify-center text-sm text-sf-ink-soft">No image</div>
         ) : activeItem.type === "video" ? (
           // eslint-disable-next-line jsx-a11y/media-has-caption -- product demo clips have no captions to provide
           <video className="h-full w-full object-cover" controls playsInline src={activeItem.url} />
         ) : (
-          <Image alt={alt} className="object-cover" fill priority sizes="(max-width: 640px) 100vw, 50vw" src={activeItem.url} />
+          <Image alt={alt} className="object-cover" fill priority sizes="(max-width: 1024px) 100vw, 40vw" src={activeItem.url} />
         )}
       </div>
       {media.length > 1 ? (
-        <div className="flex gap-2">
+        <div className="flex gap-2 overflow-x-auto lg:flex-col lg:overflow-visible">
           {media.map((item, i) => (
             <button
               aria-label={item.type === "video" ? `Show video ${i + 1}` : `Show photo ${i + 1}`}
               aria-pressed={active === i}
-              className="relative h-16 w-16 overflow-hidden rounded-md border"
+              className="relative h-16 w-16 flex-none overflow-hidden rounded-md border"
               key={item.url}
               onClick={() => setActive(i)}
               style={{ borderColor: active === i ? "#1a1c1e" : "var(--sf-line)" }}

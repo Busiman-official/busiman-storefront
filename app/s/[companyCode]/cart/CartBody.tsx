@@ -25,7 +25,7 @@ export function CartBody({ companyCode, accent, currency }: { companyCode: strin
         <>
           <ul className="divide-y divide-sf-line rounded-lg border border-sf-line bg-sf-surface">
             {items.map((item) => (
-              <li className="flex items-center gap-3 p-3" key={item.slug}>
+              <li className="flex items-center gap-3 p-3" key={`${item.slug}::${item.variantId ?? ""}`}>
                 <Link className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md bg-sf-bg" href={`/s/${companyCode}/products/${item.slug}`}>
                   {item.image ? <Image alt={item.name} className="object-cover" fill sizes="64px" src={item.image} /> : null}
                 </Link>
@@ -33,12 +33,13 @@ export function CartBody({ companyCode, accent, currency }: { companyCode: strin
                   <Link className="truncate text-sm font-medium text-sf-ink hover:underline" href={`/s/${companyCode}/products/${item.slug}`}>
                     {item.name}
                   </Link>
+                  {item.variantName ? <p className="truncate text-xs text-sf-ink-soft">{item.variantName}</p> : null}
                   <p className="sf-price text-xs text-sf-ink-soft">{formatPrice(item.price, currency)} each</p>
                   <div className="flex items-center gap-2">
                     <button
                       aria-label={`Decrease quantity of ${item.name}`}
                       className="flex h-7 w-7 items-center justify-center rounded border border-sf-line text-sm"
-                      onClick={() => updateQuantity(item.slug, item.quantity - 1)}
+                      onClick={() => updateQuantity(item.slug, item.variantId, item.quantity - 1)}
                       type="button"
                     >
                       −
@@ -47,14 +48,14 @@ export function CartBody({ companyCode, accent, currency }: { companyCode: strin
                     <button
                       aria-label={`Increase quantity of ${item.name}`}
                       className="flex h-7 w-7 items-center justify-center rounded border border-sf-line text-sm"
-                      onClick={() => updateQuantity(item.slug, item.quantity + 1)}
+                      onClick={() => updateQuantity(item.slug, item.variantId, item.quantity + 1)}
                       type="button"
                     >
                       +
                     </button>
                     <button
                       className="ml-2 text-xs text-sf-ink-soft underline"
-                      onClick={() => removeItem(item.slug)}
+                      onClick={() => removeItem(item.slug, item.variantId)}
                       type="button"
                     >
                       Remove

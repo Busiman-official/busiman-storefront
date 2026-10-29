@@ -86,6 +86,9 @@ export interface StorefrontProduct {
   image: string | null;
   category?: string | null;
   inStock: boolean;
+  /** True only when this product has 2+ priced variants — the card should show "From ₹{price}"
+   * instead of a plain "₹{price}" (price is already the cheapest variant's price). */
+  isFromPrice?: boolean;
 }
 
 export interface StorefrontCatalogPage {
@@ -144,6 +147,24 @@ export interface StorefrontMediaItem {
   type: "image" | "video";
 }
 
+export interface StorefrontProductVariant {
+  variantId: string;
+  name: string;
+  isDefault: boolean;
+  price: number | null;
+  mrp: number | null;
+  discountPercent: number | null;
+  badge: StorefrontBadge | null;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  /** Per-variant override of the item's spec table/about copy — already resolved server-side to
+   * fall back to the item's own when the variant hasn't set its own. */
+  specs: Array<{ label: string; value: string }>;
+  about: string;
+  media: StorefrontMediaItem[];
+  inStock: boolean;
+}
+
 export interface StorefrontProductDetail {
   slug: string;
   name: string;
@@ -156,6 +177,18 @@ export interface StorefrontProductDetail {
   seoTitle: string | null;
   seoDescription: string | null;
   inStock: boolean;
+  /** Every publicly-visible, active variant — one entry for a single-variant product (same values
+   * as the top-level fields above, which mirror the default variant). */
+  variants: StorefrontProductVariant[];
+  /** Amazon-style "Product details" spec table — item-level (shared across variants), empty when
+   * the merchant hasn't filled any in. */
+  specs: Array<{ label: string; value: string }>;
+  /** Rich "About this product" copy (Markdown) — shown above the specs table, rendered through
+   * MarkdownContent. Empty string when the merchant hasn't written one. */
+  about: string;
+  /** "Products you might like" — same-category products first, topped up with the rest of the
+   * live catalog. Up to 8, excludes this product itself. */
+  related: StorefrontProduct[];
 }
 
 export async function fetchProduct(companyCode: string, slug: string): Promise<StorefrontProductDetail | null> {

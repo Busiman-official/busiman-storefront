@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Script from "next/script";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useCart } from "@/components/CartProvider";
 import { formatPrice } from "@/components/templates/shared";
 
@@ -21,6 +21,26 @@ declare global {
     };
   }
 }
+
+function todayYmd(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/** A plain field label + input wrapper, used throughout the form below — one place to keep
+ * label/input spacing consistent rather than repeating the pair's markup at every field. */
+function Field({ label, htmlFor, hint, children }: { label: string; htmlFor: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1">
+      <label className="text-xs font-medium text-sf-ink-soft" htmlFor={htmlFor}>
+        {label}
+      </label>
+      {children}
+      {hint ? <p className="text-xs text-sf-ink-soft">{hint}</p> : null}
+    </div>
+  );
+}
+
+const inputClass = "w-full rounded-md border border-sf-line bg-sf-surface px-3 py-2 text-sm text-sf-ink outline-none focus:border-sf-ink-soft";
 
 export function CheckoutBody({
   companyCode,
@@ -46,11 +66,15 @@ export function CheckoutBody({
   const [email, setEmail] = useState("");
   const [address, setAddress] = useState("");
   const [pincode, setPincode] = useState("");
+  const [deliveryDate, setDeliveryDate] = useState("");
+  const [deliveryInstructions, setDeliveryInstructions] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("online");
   const [stage, setStage] = useState<Stage>({ kind: "form" });
 
   const [deliveryEstimate, setDeliveryEstimate] = useState<number | null>(null);
   const [estimatingDelivery, setEstimatingDelivery] = useState(false);
+
+  const minDeliveryDate = useMemo(() => todayYmd(), []);
 
   // Live delivery-charge preview — fires as soon as a valid 6-digit pincode is typed, debounced so
   // it doesn't fire on every keystroke. Read-only lookup, no checkout record created.
@@ -136,8 +160,10 @@ export function CheckoutBody({
             email: email.trim() || undefined,
             address: address.trim(),
             pincode: requiresPincode ? pincode.trim() : undefined,
+            deliveryDate: deliveryDate || undefined,
+            deliveryInstructions: deliveryInstructions.trim() || undefined,
           },
-          lines: items.map((i) => ({ slug: i.slug, quantity: i.quantity })),
+          lines: items.map((i) => ({ slug: i.slug, quantity: i.quantity, variantId: i.variantId })),
           paymentMethod: codAvailable ? paymentMethod : "online",
         }),
       });
@@ -205,12 +231,24 @@ export function CheckoutBody({
   const deliveryKnown = requiresPincode && deliveryEstimate != null;
   const formTotal = totalAmount + (showCodFee ? codExtraFee : 0) + (deliveryKnown ? deliveryEstimate! : 0);
 
-  return (
-    <main className="mx-auto w-full max-w-md flex-1 space-y-6 px-4 py-8" id="section-page-content">
-      <Script src="https://sdk.cashfree.com/js/v3/cashfree.js" strategy="afterInteractive" />
-      <h1 className="font-heading text-lg font-semibold text-sf-ink">Checkout</h1>
+  const summary = (
+    <div className="space-y-4 rounded-lg border border-sf-line bg-sf-surface p-4">
+      <ul className="space-y-2.5">
+        {items.map((item) => (
+          <li className="flex items-start justify-between gap-3 text-sm" key={`${item.slug}:${item.variantId ?? ""}`}>
+            <div className="min-w-0">
+              <p className="truncate text-sf-ink">
+                {item.name}
+                <span className="text-sf-ink-soft"> × {item.quantity}</span>
+              </p>
+              {item.variantName ? <p className="text-xs text-sf-ink-soft">{item.variantName}</p> : null}
+            </div>
+            <span className="sf-price flex-none text-sf-ink">{formatPrice((item.price ?? 0) * item.quantity, currency)}</span>
+          </li>
+        ))}
+      </ul>
 
-      <div className="space-y-1.5 rounded-lg border border-sf-line bg-sf-surface p-4 text-sm">
+      <div className="space-y-1.5 border-t border-sf-line pt-3 text-sm">
         <div className="flex items-center justify-between text-sf-ink-soft">
           <span>Subtotal</span>
           <span className="sf-price">{formatPrice(totalAmount, currency)}</span>
@@ -240,135 +278,137 @@ export function CheckoutBody({
           <span className="sf-price">{formatPrice(formTotal, currency)}</span>
         </div>
       </div>
+    </div>
+  );
 
-      {stage.kind === "error" ? (
-        <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">{stage.message}</p>
-      ) : null}
+  return (
+    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8" id="section-page-content">
+      <Script src="https://sdk.cashfree.com/js/v3/cashfree.js" strategy="afterInteractive" />
+      <h1 className="font-heading text-lg font-semibold text-sf-ink">Checkout</h1>
 
-      <form
-        className="space-y-4"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void startCheckout();
-        }}
-      >
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-sf-ink-soft" htmlFor="name">
-            Your name
-          </label>
-          <input
-            className="w-full rounded-md border border-sf-line px-3 py-2 text-sm"
-            id="name"
-            onChange={(e) => setName(e.target.value)}
-            required
-            value={name}
-          />
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-sf-ink-soft" htmlFor="phone">
-            Phone number
-          </label>
-          <input
-            className="w-full rounded-md border border-sf-line px-3 py-2 text-sm"
-            id="phone"
-            inputMode="tel"
-            onChange={(e) => setPhone(e.target.value)}
-            required
-            value={phone}
-          />
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-sf-ink-soft" htmlFor="address">
-            Delivery address
-          </label>
-          <textarea
-            className="w-full rounded-md border border-sf-line px-3 py-2 text-sm"
-            id="address"
-            onChange={(e) => setAddress(e.target.value)}
-            placeholder="House/flat, street, locality, city, pincode"
-            required
-            rows={3}
-            value={address}
-          />
-        </div>
-        {requiresPincode ? (
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-sf-ink-soft" htmlFor="pincode">
-              Delivery pincode
-            </label>
-            <input
-              className="w-full rounded-md border border-sf-line px-3 py-2 text-sm"
-              id="pincode"
-              inputMode="numeric"
-              maxLength={6}
-              onChange={(e) => setPincode(e.target.value.replace(/\D/g, ""))}
-              placeholder="6-digit pincode"
-              required
-              value={pincode}
-            />
-            <p className="text-xs text-sf-ink-soft">Delivery charge is calculated from your pincode.</p>
-          </div>
-        ) : null}
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-sf-ink-soft" htmlFor="email">
-            Email (optional)
-          </label>
-          <input
-            className="w-full rounded-md border border-sf-line px-3 py-2 text-sm"
-            id="email"
-            onChange={(e) => setEmail(e.target.value)}
-            type="email"
-            value={email}
-          />
-        </div>
+      <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_340px] lg:items-start">
+        <div className="space-y-6 lg:order-1">
+          {stage.kind === "error" ? (
+            <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">{stage.message}</p>
+          ) : null}
 
-        {codEnabled ? (
-          <div className="space-y-2">
-            <span className="text-xs font-medium text-sf-ink-soft">Payment method</span>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                className="cursor-pointer rounded-md border px-3 py-2.5 text-left text-sm font-medium transition-colors"
-                onClick={() => setPaymentMethod("online")}
-                style={
-                  paymentMethod === "online"
-                    ? { borderColor: accent, color: accent, backgroundColor: `color-mix(in srgb, ${accent} 8%, transparent)` }
-                    : { borderColor: "var(--sf-line)", color: "var(--sf-ink)" }
-                }
-                type="button"
-              >
-                Pay online
-              </button>
-              <button
-                className="cursor-pointer rounded-md border px-3 py-2.5 text-left text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={!codAvailable}
-                onClick={() => setPaymentMethod("cod")}
-                style={
-                  paymentMethod === "cod" && codAvailable
-                    ? { borderColor: accent, color: accent, backgroundColor: `color-mix(in srgb, ${accent} 8%, transparent)` }
-                    : { borderColor: "var(--sf-line)", color: "var(--sf-ink)" }
-                }
-                type="button"
-              >
-                Pay on Delivery
-              </button>
+          <form
+            className="space-y-5"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void startCheckout();
+            }}
+          >
+            <div className="space-y-4 rounded-lg border border-sf-line bg-sf-surface p-4">
+              <h2 className="font-heading text-sm font-semibold text-sf-ink">Contact & delivery</h2>
+              <Field htmlFor="name" label="Your name">
+                <input className={inputClass} id="name" onChange={(e) => setName(e.target.value)} required value={name} />
+              </Field>
+              <Field htmlFor="phone" label="Phone number">
+                <input className={inputClass} id="phone" inputMode="tel" onChange={(e) => setPhone(e.target.value)} required value={phone} />
+              </Field>
+              <Field htmlFor="address" label="Delivery address">
+                <textarea
+                  className={inputClass}
+                  id="address"
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="House/flat, street, locality, city, pincode"
+                  required
+                  rows={3}
+                  value={address}
+                />
+              </Field>
+              {requiresPincode ? (
+                <Field hint="Delivery charge is calculated from your pincode." htmlFor="pincode" label="Delivery pincode">
+                  <input
+                    className={inputClass}
+                    id="pincode"
+                    inputMode="numeric"
+                    maxLength={6}
+                    onChange={(e) => setPincode(e.target.value.replace(/\D/g, ""))}
+                    placeholder="6-digit pincode"
+                    required
+                    value={pincode}
+                  />
+                </Field>
+              ) : null}
+              <Field htmlFor="email" label="Email (optional)">
+                <input className={inputClass} id="email" onChange={(e) => setEmail(e.target.value)} type="email" value={email} />
+              </Field>
             </div>
-            {codOverCap ? (
-              <p className="text-xs text-sf-ink-soft">
-                Cash on Delivery is available for orders up to {formatPrice(codMaxOrderValue!, currency)}.
-              </p>
-            ) : null}
-          </div>
-        ) : null}
 
-        <button
-          className="w-full rounded-md py-3 text-sm font-semibold text-white disabled:opacity-50"
-          disabled={!canSubmit || stage.kind === "processing"}
-          style={{ backgroundColor: accent }}
-          type="submit"
-        >
-          {stage.kind === "processing" ? "Please wait…" : paymentMethod === "cod" && codAvailable ? "Place order" : "Continue to payment"}
-        </button>
-      </form>
+            <div className="space-y-4 rounded-lg border border-sf-line bg-sf-surface p-4">
+              <h2 className="font-heading text-sm font-semibold text-sf-ink">Delivery preferences (optional)</h2>
+              <Field hint="A preference, not a guaranteed slot — the seller will confirm." htmlFor="deliveryDate" label="Preferred delivery date">
+                <input className={inputClass} id="deliveryDate" min={minDeliveryDate} onChange={(e) => setDeliveryDate(e.target.value)} type="date" value={deliveryDate} />
+              </Field>
+              <Field htmlFor="deliveryInstructions" label="Delivery instructions">
+                <textarea
+                  className={inputClass}
+                  id="deliveryInstructions"
+                  maxLength={500}
+                  onChange={(e) => setDeliveryInstructions(e.target.value)}
+                  placeholder="E.g. leave at the gate, call before arriving, landmark near your address"
+                  rows={2}
+                  value={deliveryInstructions}
+                />
+              </Field>
+            </div>
+
+            {codEnabled ? (
+              <div className="space-y-2 rounded-lg border border-sf-line bg-sf-surface p-4">
+                <span className="text-xs font-medium text-sf-ink-soft">Payment method</span>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    className="cursor-pointer rounded-md border px-3 py-2.5 text-left text-sm font-medium transition-colors"
+                    onClick={() => setPaymentMethod("online")}
+                    style={
+                      paymentMethod === "online"
+                        ? { borderColor: accent, color: accent, backgroundColor: `color-mix(in srgb, ${accent} 8%, transparent)` }
+                        : { borderColor: "var(--sf-line)", color: "var(--sf-ink)" }
+                    }
+                    type="button"
+                  >
+                    Pay online
+                  </button>
+                  <button
+                    className="cursor-pointer rounded-md border px-3 py-2.5 text-left text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={!codAvailable}
+                    onClick={() => setPaymentMethod("cod")}
+                    style={
+                      paymentMethod === "cod" && codAvailable
+                        ? { borderColor: accent, color: accent, backgroundColor: `color-mix(in srgb, ${accent} 8%, transparent)` }
+                        : { borderColor: "var(--sf-line)", color: "var(--sf-ink)" }
+                    }
+                    type="button"
+                  >
+                    Pay on Delivery
+                  </button>
+                </div>
+                {codOverCap ? (
+                  <p className="text-xs text-sf-ink-soft">
+                    Cash on Delivery is available for orders up to {formatPrice(codMaxOrderValue!, currency)}.
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+
+            {/* Summary + submit repeat here below lg (no sticky sidebar on a narrow screen). */}
+            <div className="lg:hidden">{summary}</div>
+
+            <button
+              className="w-full cursor-pointer rounded-md py-3 text-sm font-semibold text-white transition-[filter] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={!canSubmit || stage.kind === "processing"}
+              style={{ backgroundColor: accent }}
+              type="submit"
+            >
+              {stage.kind === "processing" ? "Please wait…" : paymentMethod === "cod" && codAvailable ? "Place order" : "Continue to payment"}
+            </button>
+          </form>
+        </div>
+
+        <aside className="hidden lg:sticky lg:top-24 lg:order-2 lg:block lg:self-start">{summary}</aside>
+      </div>
     </main>
   );
 }
