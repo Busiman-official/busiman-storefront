@@ -78,7 +78,7 @@ export function ModernTemplate({ companyCode, site, catalog, categories, activeC
                   <ProductPriceLine accent={accent} currency={siteDetails.currency} item={featured} size="base" />
                   {featured.price != null ? (
                     <div className="max-w-[220px]">
-                      <AddToCartButton accent={accent} product={featured} />
+                      <AddToCartButton accent={accent} companyCode={companyCode} product={featured} />
                     </div>
                   ) : null}
                 </div>
@@ -104,7 +104,7 @@ export function ModernTemplate({ companyCode, site, catalog, categories, activeC
                     </div>
                     <p className="text-sm font-medium text-sf-ink">{item.name}</p>
                     <ProductPriceLine accent={accent} currency={siteDetails.currency} item={item} />
-                    {item.price != null ? <AddToCartButton accent={accent} product={item} /> : null}
+                    {item.price != null ? <AddToCartButton accent={accent} companyCode={companyCode} product={item} /> : null}
                   </div>
                 ))}
               </div>

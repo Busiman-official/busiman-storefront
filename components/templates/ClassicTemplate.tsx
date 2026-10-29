@@ -232,7 +232,7 @@ export function ClassicTemplate({ companyCode, site, catalog, categories, active
                 </Link>
                 <div className="px-1 pb-1">
                   {item.price != null ? (
-                    <AddToCartButton accent={accent} product={item} />
+                    <AddToCartButton accent={accent} companyCode={companyCode} product={item} />
                   ) : (
                     <Link
                       className="block cursor-pointer rounded-full border border-sf-line py-2 text-center text-xs font-semibold text-sf-ink transition-colors hover:border-sf-ink-soft"

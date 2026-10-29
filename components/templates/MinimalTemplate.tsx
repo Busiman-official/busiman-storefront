@@ -70,7 +70,7 @@ export function MinimalTemplate({ companyCode, site, catalog, categories, active
                 </div>
                 {item.price != null ? (
                   <div className="w-24 shrink-0">
-                    <AddToCartButton accent={accent} product={item} />
+                    <AddToCartButton accent={accent} companyCode={companyCode} product={item} />
                   </div>
                 ) : null}
               </li>

@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useCart } from "./CartProvider";
 import type { StorefrontProduct } from "@/lib/api";
 
-export function AddToCartButton({ product, accent }: { product: StorefrontProduct; accent: string }) {
+export function AddToCartButton({ product, accent, companyCode }: { product: StorefrontProduct; accent: string; companyCode: string }) {
   const { addItem } = useCart();
   const [added, setAdded] = useState(false);
 
@@ -13,6 +14,23 @@ export function AddToCartButton({ product, accent }: { product: StorefrontProduc
       <button className="w-full cursor-not-allowed rounded-full bg-sf-line py-2 text-xs font-semibold text-sf-ink-soft" disabled type="button">
         Out of stock
       </button>
+    );
+  }
+
+  // A "from ₹X" card has 2+ variants at different prices — product.price here is just the
+  // cheapest one. Adding straight from the grid would add that cheapest price with no variantId
+  // at all, so the cart/checkout would have no record of which variant was actually meant (see
+  // reports/Busiman ecommerce department audit.md's BUGS list). Send the shopper to the PDP's own
+  // variant picker instead, same as every real multi-variant storefront does for a catalog card.
+  if (product.isFromPrice) {
+    return (
+      <Link
+        className="flex w-full items-center justify-center rounded-full py-2 text-xs font-semibold text-white transition-[filter] duration-200 hover:brightness-110 active:brightness-95"
+        href={`/s/${companyCode}/products/${product.slug}`}
+        style={{ backgroundColor: accent }}
+      >
+        Select options
+      </Link>
     );
   }
 

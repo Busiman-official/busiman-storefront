@@ -168,7 +168,7 @@ export function SearchPageBody({
                         <ProductPriceLine accent={accent} currency={siteDetails.currency} item={item} />
                       </div>
                     </Link>
-                    {item.price != null ? <AddToCartButton accent={accent} product={item} /> : null}
+                    {item.price != null ? <AddToCartButton accent={accent} companyCode={companyCode} product={item} /> : null}
                   </div>
                 ))}
               </div>
