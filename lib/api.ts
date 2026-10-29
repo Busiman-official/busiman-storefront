@@ -248,7 +248,7 @@ export interface OrderShipment {
 }
 
 export interface OrderStatus {
-  status: "pending" | "paid" | "failed";
+  status: "pending" | "paid" | "failed" | "cancelled";
   failureReason: string | null;
   subtotal: number;
   shippingFee: number;
@@ -259,6 +259,9 @@ export interface OrderStatus {
   createdAt: string;
   orderNumbers: string[];
   shipment: OrderShipment;
+  /** Only set once `status` is "cancelled" — null means nothing was refunded (COD/₹0 order), not
+   * unknown. See checkout.service.ts's getOrderStatusByToken. */
+  refundedAmount: number | null;
 }
 
 export async function fetchOrderStatus(companyCode: string, token: string): Promise<OrderStatus | null> {

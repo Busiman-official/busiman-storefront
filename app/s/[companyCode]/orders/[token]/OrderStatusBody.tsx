@@ -25,6 +25,17 @@ export function OrderStatusBody({ companyCode, site, order }: { companyCode: str
             </>
           ) : order.status === "pending" ? (
             <p className="text-sm text-sf-ink-soft">Payment is still processing — check back shortly.</p>
+          ) : order.status === "cancelled" ? (
+            <>
+              <p className="text-sm font-medium text-sf-ink">
+                {order.orderNumbers.length === 1
+                  ? `Order ${order.orderNumbers[0]} was cancelled`
+                  : `Orders ${order.orderNumbers.join(", ")} were cancelled`}
+              </p>
+              {order.refundedAmount != null ? (
+                <p className="text-sm text-sf-ink-soft">{formatPrice(order.refundedAmount, order.currency)} was refunded to your payment method.</p>
+              ) : null}
+            </>
           ) : (
             <>
               <p className="text-sm text-red-700">Payment was not completed</p>
