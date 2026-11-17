@@ -81,6 +81,8 @@ export function ProductVariantSection({
   const discountPercent = selected?.discountPercent ?? product.discountPercent;
   const badge = selected?.badge ?? product.badge;
   const inStock = selected?.inStock ?? product.inStock;
+  const notAvailableOnline = selected?.notAvailableOnline ?? product.notAvailableOnline ?? false;
+  const maxQuantity = selected ? selected.maxQuantity ?? null : product.maxQuantity ?? null;
   const media = selected?.media ?? product.media;
   const about = selected?.about ?? product.about;
   const specs = selected?.specs ?? product.specs;
@@ -149,7 +151,7 @@ export function ProductVariantSection({
                     type="button"
                   >
                     {v.name}
-                    {!v.inStock ? " — Out of stock" : ""}
+                    {!v.inStock ? (v.notAvailableOnline ? " — Not available online" : " — Out of stock") : ""}
                   </button>
                 );
               })}
@@ -191,7 +193,9 @@ export function ProductVariantSection({
             companyCode={companyCode}
             image={media.find((m) => m.type === "image")?.url ?? null}
             inStock={inStock}
+            maxQuantity={maxQuantity}
             name={product.name}
+            notAvailableOnline={notAvailableOnline}
             price={price}
             slug={product.slug}
             variantId={selected?.variantId}
@@ -233,7 +237,7 @@ export function ProductVariantSection({
             className="inline-block rounded-full px-2.5 py-1 text-xs font-medium"
             style={inStock ? { backgroundColor: "#dcfce7", color: "#15803d" } : { backgroundColor: "#fee2e2", color: "#b91c1c" }}
           >
-            {inStock ? "In stock" : "Out of stock"}
+            {inStock ? "In stock" : notAvailableOnline ? "Not available online" : "Out of stock"}
           </span>
 
           <PdpAddToCart
@@ -241,7 +245,9 @@ export function ProductVariantSection({
             companyCode={companyCode}
             image={media.find((m) => m.type === "image")?.url ?? null}
             inStock={inStock}
+            maxQuantity={maxQuantity}
             name={product.name}
+            notAvailableOnline={notAvailableOnline}
             price={price}
             slug={product.slug}
             variantId={selected?.variantId}

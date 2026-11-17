@@ -66,7 +66,7 @@ export function MinimalTemplate({ companyCode, site, catalog, categories, active
                     ) : null}
                   </p>
                   <ProductPriceLine accent={accent} currency={siteDetails.currency} item={item} />
-                  {!item.inStock ? <p className="text-[11px] text-sf-ink-soft">Out of stock</p> : null}
+                  {!item.inStock ? <p className="text-[11px] text-sf-ink-soft">{item.notAvailableOnline ? "Not available online" : "Out of stock"}</p> : null}
                 </div>
                 {item.price != null ? (
                   <div className="w-24 shrink-0">

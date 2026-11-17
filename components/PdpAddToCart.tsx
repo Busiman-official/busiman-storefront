@@ -11,6 +11,8 @@ export function PdpAddToCart({
   image,
   accent,
   inStock,
+  notAvailableOnline = false,
+  maxQuantity = null,
   companyCode,
   variantId,
   variantName,
@@ -21,6 +23,10 @@ export function PdpAddToCart({
   image: string | null;
   accent: string;
   inStock: boolean;
+  /** Product can never be bought online — the buttons say "Not available online", not "Out of stock". */
+  notAvailableOnline?: boolean;
+  /** Most units allowed at once (null = no limit). Comes from the server for stock-tracked products. */
+  maxQuantity?: number | null;
   /** For the "Buy Now" button's jump straight to checkout. */
   companyCode: string;
   /** The shopper's selected variant, when the product has more than one. */
@@ -29,11 +35,19 @@ export function PdpAddToCart({
 }) {
   const { addItem, buyNow } = useCart();
   const router = useRouter();
-  const [quantity, setQuantity] = useState(1);
+  const [wanted, setWanted] = useState(1);
   const [added, setAdded] = useState(false);
   const [buying, setBuying] = useState(false);
 
   if (price == null) return null;
+
+  // Never let the shopper ask for more than the store can supply; if they switch to an option with
+  // fewer units, the shown quantity follows it down.
+  const cap = maxQuantity != null && maxQuantity > 0 ? maxQuantity : null;
+  const quantity = cap != null ? Math.min(wanted, cap) : wanted;
+  const setQuantity = (update: (q: number) => number) => setWanted(update(quantity));
+  const atMax = cap != null && quantity >= cap;
+  const unavailableLabel = notAvailableOnline ? "Not available online" : "Out of stock";
 
   return (
     <div className="space-y-3">
@@ -51,7 +65,8 @@ export function PdpAddToCart({
           <span className="sf-price w-6 text-center text-sm font-semibold text-sf-ink">{quantity}</span>
           <button
             aria-label="Increase quantity"
-            className="flex h-10 w-8 cursor-pointer items-center justify-center text-base text-sf-ink transition-colors hover:text-sf-ink-soft"
+            className="flex h-10 w-8 cursor-pointer items-center justify-center text-base text-sf-ink transition-colors hover:text-sf-ink-soft disabled:cursor-not-allowed disabled:opacity-40"
+            disabled={atMax}
             onClick={() => setQuantity((q) => q + 1)}
             type="button"
           >
@@ -80,7 +95,7 @@ export function PdpAddToCart({
               <circle cx="17" cy="20" r="1.4" />
             </svg>
           )}
-          <span className="truncate">{!inStock ? "Out of stock" : added ? "Added" : "Add to cart"}</span>
+          <span className="truncate">{!inStock ? unavailableLabel : added ? "Added" : "Add to cart"}</span>
         </button>
       </div>
       <button
@@ -94,8 +109,11 @@ export function PdpAddToCart({
         style={{ backgroundColor: accent }}
         type="button"
       >
-        {!inStock ? "Out of stock" : buying ? "Taking you to checkout…" : "Buy now"}
+        {!inStock ? unavailableLabel : buying ? "Taking you to checkout…" : "Buy now"}
       </button>
+      {inStock && atMax ? (
+        <p className="text-center text-xs text-sf-ink-soft">That is the most you can order right now.</p>
+      ) : null}
     </div>
   );
 }

@@ -50,7 +50,7 @@ export function RelatedProducts({
               {item.badge ? <ProductBadgeRibbon badge={item.badge} /> : null}
               {!item.inStock ? (
                 <span className="absolute right-2 top-2 rounded-full bg-sf-surface/90 px-2 py-0.5 text-[11px] font-medium text-sf-ink-soft">
-                  Out of stock
+                  {item.notAvailableOnline ? "Not available online" : "Out of stock"}
                 </span>
               ) : null}
             </div>

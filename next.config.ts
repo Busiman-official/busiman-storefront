@@ -3,9 +3,9 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   output: "standalone",
   images: {
-    // Tenant-uploaded product/logo images come from either of two hosts depending on when they
-    // were uploaded: legacy item-level images are still Cloudinary; the newer per-variant
-    // photos/videos (see InventoryVariant.media) are S3 presigned URLs, served as virtual-hosted
+    // Tenant-uploaded images are now all stored in S3 and served as presigned URLs. The Cloudinary
+    // host below is LEGACY only: older item images saved before the S3 move may still hold
+    // res.cloudinary.com URLs in production, so keep it until that data is migrated. S3 URLs are served as virtual-hosted
     // style URLs (https://{bucket}.s3.{region}.amazonaws.com/...). Exact hostname, matching how
     // the Cloudinary entry above is also exact — if the bucket or region ever changes (see
     // server/src/core/aws/config.ts's AWS_S3_BUCKET/AWS_REGION), update this too.

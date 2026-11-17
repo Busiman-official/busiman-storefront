@@ -94,7 +94,12 @@ export function ClassicTemplate({ companyCode, site, catalog, categories, active
       <NavbarFromSite companyCode={companyCode} site={site} />
 
       <section
-        className={`relative overflow-hidden border-b border-sf-line px-4 py-14 text-center sm:py-20 ${isCarouselHero ? "min-h-80 sm:min-h-105" : ""}`}
+        // `z-0` (not just `relative`) is load-bearing: it gives this section its own stacking
+        // context, so the `z-10` text/controls inside it (and inside HeroCarousel) stay contained
+        // here instead of competing directly with the navbar's own `z-10` sticky header — without
+        // it, both are siblings in the SAME stacking context, and DOM order (hero after navbar)
+        // made the hero's text paint over the sticky navbar instead of staying behind it.
+        className={`relative z-0 overflow-hidden border-b border-sf-line px-4 py-14 text-center sm:py-20 ${isCarouselHero ? "min-h-80 sm:min-h-105" : ""}`}
         id="section-hero"
         style={heroBg || isCarouselHero ? undefined : { background: `color-mix(in srgb, ${accent} 7%, var(--sf-surface))` }}
       >
@@ -218,7 +223,7 @@ export function ClassicTemplate({ companyCode, site, catalog, categories, active
                     {item.badge ? <ProductBadgeRibbon badge={item.badge} /> : null}
                     {!item.inStock ? (
                       <span className="absolute right-2 top-2 rounded-full bg-sf-surface/90 px-2 py-0.5 text-[11px] font-medium text-sf-ink-soft">
-                        Out of stock
+                        {item.notAvailableOnline ? "Not available online" : "Out of stock"}
                       </span>
                     ) : null}
                   </div>

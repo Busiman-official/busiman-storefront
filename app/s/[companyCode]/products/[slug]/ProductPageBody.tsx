@@ -8,6 +8,7 @@
 import Link from "next/link";
 import { NavbarFromSite, StoreFooter, WhatsAppFloatButton } from "@/components/templates/shared";
 import type { StorefrontProductDetail, StorefrontSite } from "@/lib/api";
+import { safeJsonLd } from "@/lib/json-ld";
 import { ProductVariantSection } from "./ProductVariantSection";
 import { RelatedProducts } from "./RelatedProducts";
 
@@ -75,8 +76,8 @@ export function ProductPageBody({
       <WhatsAppFloatButton storeName={siteDetails.storeName} whatsappNumber={siteDetails.whatsappNumber} />
 
       {/* Structured data for search engines (Google Shopping/rich results) — not visible to shoppers. */}
-      <script dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }} type="application/ld+json" />
-      <script dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} type="application/ld+json" />
+      <script dangerouslySetInnerHTML={{ __html: safeJsonLd(productJsonLd) }} type="application/ld+json" />
+      <script dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbJsonLd) }} type="application/ld+json" />
     </>
   );
 }

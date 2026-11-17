@@ -86,6 +86,9 @@ export interface StorefrontProduct {
   image: string | null;
   category?: string | null;
   inStock: boolean;
+  /** True when the product can never be bought online (e.g. it needs a serial number) — show "Not
+   * available online" instead of "Out of stock". */
+  notAvailableOnline?: boolean;
   /** True only when this product has 2+ priced variants — the card should show "From ₹{price}"
    * instead of a plain "₹{price}" (price is already the cheapest variant's price). */
   isFromPrice?: boolean;
@@ -163,6 +166,10 @@ export interface StorefrontProductVariant {
   about: string;
   media: StorefrontMediaItem[];
   inStock: boolean;
+  notAvailableOnline?: boolean;
+  /** Most units a shopper can add at once. null/undefined = no limit (services, non-stock items).
+   * Capped by the server, so it is never the exact stock level. */
+  maxQuantity?: number | null;
 }
 
 export interface StorefrontProductDetail {
@@ -177,6 +184,8 @@ export interface StorefrontProductDetail {
   seoTitle: string | null;
   seoDescription: string | null;
   inStock: boolean;
+  notAvailableOnline?: boolean;
+  maxQuantity?: number | null;
   /** Every publicly-visible, active variant — one entry for a single-variant product (same values
    * as the top-level fields above, which mirror the default variant). */
   variants: StorefrontProductVariant[];

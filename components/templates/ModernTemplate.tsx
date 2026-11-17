@@ -67,7 +67,7 @@ export function ModernTemplate({ companyCode, site, catalog, categories, activeC
                   {featured.badge ? <ProductBadgeRibbon badge={featured.badge} /> : null}
                   {!featured.inStock ? (
                     <span className="absolute left-3 top-3 rounded-full bg-sf-bg/90 px-2 py-0.5 text-[11px] font-medium text-sf-ink-soft">
-                      Out of stock
+                      {featured.notAvailableOnline ? "Not available online" : "Out of stock"}
                     </span>
                   ) : null}
                 </div>
@@ -98,7 +98,7 @@ export function ModernTemplate({ companyCode, site, catalog, categories, activeC
                       {item.badge ? <ProductBadgeRibbon badge={item.badge} /> : null}
                       {!item.inStock ? (
                         <span className="absolute left-2 top-2 rounded-full bg-sf-bg/90 px-2 py-0.5 text-[11px] font-medium text-sf-ink-soft">
-                          Out of stock
+                          {item.notAvailableOnline ? "Not available online" : "Out of stock"}
                         </span>
                       ) : null}
                     </div>

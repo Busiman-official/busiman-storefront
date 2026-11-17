@@ -14,26 +14,38 @@ export function CartBody({ companyCode, accent, currency }: { companyCode: strin
   // itself already re-checks stock (finalizeOrders), but only after the whole form is filled in.
   // This re-check happens right here instead, so a sold-out item is caught before that point.
   const [soldOutKeys, setSoldOutKeys] = useState<Set<string>>(new Set());
+  // Per cart line: why it cannot be bought and the most units allowed (null = no limit).
+  const [limits, setLimits] = useState<Map<string, { notAvailableOnline: boolean; maxQuantity: number | null }>>(new Map());
   const [checkedStock, setCheckedStock] = useState(false);
 
   useEffect(() => {
     if (items.length === 0) return;
     let cancelled = false;
-    setCheckedStock(false);
     fetch(`/api/storefront/${companyCode}/stock-check`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ lines: items.map((i) => ({ slug: i.slug, variantId: i.variantId })) }),
+      // The server now answers "can THIS quantity be bought", not just "is there any".
+      body: JSON.stringify({ lines: items.map((i) => ({ slug: i.slug, variantId: i.variantId, quantity: i.quantity })) }),
       cache: "no-store",
     })
       .then((r) => r.json())
       .then((json) => {
         if (cancelled || !json.success) return;
         const sold = new Set<string>();
-        for (const row of json.data as Array<{ slug: string; variantId?: string; inStock: boolean }>) {
-          if (!row.inStock) sold.add(cartLineKey({ slug: row.slug, variantId: row.variantId }));
+        const nextLimits = new Map<string, { notAvailableOnline: boolean; maxQuantity: number | null }>();
+        for (const row of json.data as Array<{
+          slug: string;
+          variantId?: string;
+          inStock: boolean;
+          notAvailableOnline?: boolean;
+          maxQuantity?: number | null;
+        }>) {
+          const key = cartLineKey({ slug: row.slug, variantId: row.variantId });
+          if (!row.inStock) sold.add(key);
+          nextLimits.set(key, { notAvailableOnline: Boolean(row.notAvailableOnline), maxQuantity: row.maxQuantity ?? null });
         }
         setSoldOutKeys(sold);
+        setLimits(nextLimits);
       })
       .catch(() => {
         // Network hiccup — never block checkout over this check failing; the server-side
@@ -47,7 +59,7 @@ export function CartBody({ companyCode, accent, currency }: { companyCode: strin
     };
     // Re-run whenever the cart's composition changes, not on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [companyCode, items.map((i) => cartLineKey(i)).join(",")]);
+  }, [companyCode, items.map((i) => `${cartLineKey(i)}x${i.quantity}`).join(",")]);
 
   const hasSoldOut = checkedStock && soldOutKeys.size > 0;
 
@@ -69,6 +81,17 @@ export function CartBody({ companyCode, accent, currency }: { companyCode: strin
           <ul className="divide-y divide-sf-line rounded-lg border border-sf-line bg-sf-surface">
             {items.map((item) => {
               const soldOut = soldOutKeys.has(cartLineKey(item));
+              const limit = limits.get(cartLineKey(item));
+              const maxQuantity = limit?.maxQuantity ?? null;
+              const atMax = maxQuantity != null && maxQuantity > 0 && item.quantity >= maxQuantity;
+              // Plain-language reason for a blocked line: never sellable online, sold out, or just too many.
+              const blockedText = limit?.notAvailableOnline
+                ? "Not available online — remove to continue"
+                : maxQuantity === 0 || maxQuantity == null
+                  ? "Out of stock — remove to continue"
+                  : maxQuantity >= 50
+                    ? "Please lower the quantity to continue"
+                    : `Only ${maxQuantity} available — lower the quantity to continue`;
               return (
               <li className={`flex items-center gap-3 p-3 ${soldOut ? "opacity-60" : ""}`} key={cartLineKey(item)}>
                 <Link className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md bg-sf-bg" href={`/s/${companyCode}/products/${item.slug}`}>
@@ -80,7 +103,7 @@ export function CartBody({ companyCode, accent, currency }: { companyCode: strin
                   </Link>
                   {item.variantName ? <p className="truncate text-xs text-sf-ink-soft">{item.variantName}</p> : null}
                   {soldOut ? (
-                    <p className="text-xs font-medium text-red-600">Out of stock — remove to continue</p>
+                    <p className="text-xs font-medium text-red-600">{blockedText}</p>
                   ) : (
                     <p className="sf-price text-xs text-sf-ink-soft">{formatPrice(item.price, currency)} each</p>
                   )}
@@ -96,7 +119,8 @@ export function CartBody({ companyCode, accent, currency }: { companyCode: strin
                     <span className="sf-price w-6 text-center text-sm">{item.quantity}</span>
                     <button
                       aria-label={`Increase quantity of ${item.name}`}
-                      className="flex h-7 w-7 items-center justify-center rounded border border-sf-line text-sm"
+                      className="flex h-7 w-7 items-center justify-center rounded border border-sf-line text-sm disabled:cursor-not-allowed disabled:opacity-40"
+                      disabled={atMax}
                       onClick={() => updateQuantity(item.slug, item.variantId, item.quantity + 1)}
                       type="button"
                     >
@@ -127,7 +151,7 @@ export function CartBody({ companyCode, accent, currency }: { companyCode: strin
           {hasSoldOut ? (
             <>
               <p className="text-center text-sm text-red-600">
-                Remove the out-of-stock item{soldOutKeys.size > 1 ? "s" : ""} above to continue.
+                Fix the highlighted item{soldOutKeys.size > 1 ? "s" : ""} above to continue.
               </p>
               <button
                 className="block w-full cursor-not-allowed rounded-md bg-sf-line py-3 text-center text-sm font-semibold text-sf-ink-soft"

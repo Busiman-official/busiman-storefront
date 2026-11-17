@@ -12,7 +12,7 @@ export function AddToCartButton({ product, accent, companyCode }: { product: Sto
   if (!product.inStock) {
     return (
       <button className="w-full cursor-not-allowed rounded-full bg-sf-line py-2 text-xs font-semibold text-sf-ink-soft" disabled type="button">
-        Out of stock
+        {product.notAvailableOnline ? "Not available online" : "Out of stock"}
       </button>
     );
   }
