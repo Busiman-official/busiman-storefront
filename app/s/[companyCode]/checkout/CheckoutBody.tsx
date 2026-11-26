@@ -8,7 +8,23 @@ import { formatPrice } from "@/components/templates/shared";
 
 type ClientConfig =
   | { mock: true; note?: string }
-  | { provider: "cashfree"; mode: "test" | "production"; paymentSessionId: string };
+  | {
+      provider: "razorpay";
+      mode: "test" | "live";
+      keyId: string;
+      orderId: string;
+      /** In paise, exactly as Razorpay created the order. */
+      amount: number;
+      currency: string;
+      prefill?: { name?: string; contact?: string; email?: string };
+    };
+
+type RazorpayResponse = { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string };
+
+type RazorpayInstance = {
+  open: () => void;
+  on: (event: "payment.failed", handler: (response: unknown) => void) => void;
+};
 
 type PaymentMethod = "online" | "cod";
 
@@ -16,9 +32,17 @@ type Stage = { kind: "form" } | { kind: "processing" } | { kind: "success"; orde
 
 declare global {
   interface Window {
-    Cashfree?: (opts: { mode: "sandbox" | "production" }) => {
-      checkout: (opts: { paymentSessionId: string; redirectTarget: string }) => Promise<unknown>;
-    };
+    Razorpay?: new (options: {
+      key: string;
+      order_id: string;
+      amount: number;
+      currency: string;
+      name: string;
+      prefill?: { name?: string; contact?: string; email?: string };
+      theme?: { color?: string };
+      handler: (response: RazorpayResponse) => void;
+      modal?: { ondismiss?: () => void };
+    }) => RazorpayInstance;
   }
 }
 
@@ -50,6 +74,7 @@ export function CheckoutBody({
   codMaxOrderValue,
   codExtraFee,
   requiresPincode,
+  storeName,
 }: {
   companyCode: string;
   accent: string;
@@ -58,6 +83,7 @@ export function CheckoutBody({
   codMaxOrderValue?: number;
   codExtraFee: number;
   requiresPincode: boolean;
+  storeName?: string;
 }) {
   const { items, totalAmount, clear } = useCart();
 
@@ -120,23 +146,59 @@ export function CheckoutBody({
   const canSubmit =
     name.trim().length > 0 && phone.trim().length >= 10 && address.trim().length > 0 && pincodeValid && items.length > 0;
 
-  // Cashfree's own widget resolves this promise once the shopper's payment ATTEMPT finishes
-  // (success or failure) — the result itself is never trusted; finalizeCheckout always asks the
-  // server to independently verify with Cashfree before creating anything.
-  async function openCashfreeCheckout(checkoutId: string, orderStatusToken: string, config: Extract<ClientConfig, { provider: "cashfree" }>) {
-    if (!window.Cashfree) {
+  // Razorpay's window reports back through `handler` (payment done) or `ondismiss` (closed without
+  // paying). The result it hands us is only passed on — the server checks Razorpay's signature AND
+  // asks Razorpay itself whether the order is paid before creating anything.
+  function openRazorpayCheckout(checkoutId: string, orderStatusToken: string, config: Extract<ClientConfig, { provider: "razorpay" }>) {
+    if (!window.Razorpay) {
       setStage({ kind: "error", message: "Payment could not load — please refresh and try again" });
       return;
     }
-    const cashfree = window.Cashfree({ mode: config.mode === "production" ? "production" : "sandbox" });
-    await cashfree.checkout({ paymentSessionId: config.paymentSessionId, redirectTarget: "_modal" });
-    await finalizeCheckout(checkoutId, orderStatusToken);
+    const notCompleted = "Payment was not completed. You can try again.";
+    let settled = false;
+    const rzp = new window.Razorpay({
+      key: config.keyId,
+      order_id: config.orderId,
+      amount: config.amount,
+      currency: config.currency,
+      name: storeName?.trim() || "Checkout",
+      prefill: config.prefill,
+      theme: { color: accent },
+      handler: (response) => {
+        settled = true;
+        void finalizeCheckout(checkoutId, orderStatusToken, response);
+      },
+      modal: {
+        ondismiss: () => {
+          if (!settled) setStage({ kind: "error", message: notCompleted });
+        },
+      },
+    });
+    rzp.on("payment.failed", () => {
+      // The shopper can retry inside the same window, so the window stays open; this only updates
+      // the message they will see if they close it.
+      setStage({ kind: "error", message: "Your payment did not go through. You can try again." });
+    });
+    // Back to the form (cart untouched) behind the window; processing shows again once it is paid.
+    setStage({ kind: "form" });
+    rzp.open();
   }
-
-  async function finalizeCheckout(checkoutId: string, orderStatusToken: string) {
+  async function finalizeCheckout(checkoutId: string, orderStatusToken: string, razorpayResult?: RazorpayResponse) {
     setStage({ kind: "processing" });
     try {
-      const res = await fetch(`/api/storefront/${companyCode}/checkout/${checkoutId}/confirm`, { method: "POST" });
+      const res = await fetch(`/api/storefront/${companyCode}/checkout/${checkoutId}/confirm`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          razorpayResult
+            ? {
+                razorpay_payment_id: razorpayResult.razorpay_payment_id,
+                razorpay_order_id: razorpayResult.razorpay_order_id,
+                razorpay_signature: razorpayResult.razorpay_signature,
+              }
+            : {}
+        ),
+      });
       const json = await res.json();
       if (!res.ok || !json.success) {
         setStage({ kind: "error", message: json?.error || "Payment could not be completed" });
@@ -180,7 +242,7 @@ export function CheckoutBody({
         return;
       }
       // Online payment — open the gateway immediately. No separate "awaiting payment" screen: one
-      // click on "Continue to payment" goes straight to the gateway (Cashfree opens as a modal over
+      // click on "Continue to payment" goes straight to the gateway (Razorpay opens as a window over
       // this same page, never a page navigation).
       const { checkoutId, orderStatusToken, clientConfig } = json.data as {
         checkoutId: string;
@@ -190,7 +252,7 @@ export function CheckoutBody({
       if ("mock" in clientConfig) {
         await finalizeCheckout(checkoutId, orderStatusToken);
       } else {
-        await openCashfreeCheckout(checkoutId, orderStatusToken, clientConfig);
+        openRazorpayCheckout(checkoutId, orderStatusToken, clientConfig);
       }
     } catch {
       setStage({ kind: "error", message: "Network error — please check your connection and try again" });
@@ -285,7 +347,7 @@ export function CheckoutBody({
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8" id="section-page-content">
-      <Script src="https://sdk.cashfree.com/js/v3/cashfree.js" strategy="afterInteractive" />
+      <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="afterInteractive" />
       <h1 className="font-heading text-lg font-semibold text-sf-ink">Checkout</h1>
 
       <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_340px] lg:items-start">

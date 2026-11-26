@@ -25,6 +25,7 @@ export default async function CheckoutPage({ params }: { params: Promise<{ compa
         companyCode={companyCode}
         currency={site.siteDetails.currency}
         requiresPincode={site.siteDetails.deliveryMode === "banded"}
+        storeName={site.siteDetails.storeName}
       />
     </>
   );
